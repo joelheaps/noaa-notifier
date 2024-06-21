@@ -1,6 +1,6 @@
 import pytest
 
-from forecast_discussion_notifier.app import (
+from noaa_notifier.app import (
     MesoscaleDiscussion,
     notify_discord,
 )

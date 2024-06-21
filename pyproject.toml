@@ -1,5 +1,5 @@
 [project]
-name = "forecast-discussion-notifier"
+name = "noaa-notifier"
 version = "0.1.0"
 description = "Default template for PDM package"
 authors = [{ name = "Joel Heaps", email = "joel@joelheaps.com" }]

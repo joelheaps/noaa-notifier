@@ -4,8 +4,8 @@ import httpx
 import schedule
 import structlog
 
-from forecast_discussion_notifier.data import MesoscaleDiscussion
-from forecast_discussion_notifier.db import DatabaseHandler
+from noaa_notifier.data import MesoscaleDiscussion
+from noaa_notifier.db import DatabaseHandler
 
 logger = structlog.get_logger()
 

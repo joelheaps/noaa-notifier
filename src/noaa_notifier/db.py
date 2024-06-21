@@ -2,7 +2,7 @@ import json
 import sqlite3
 from datetime import datetime
 
-from forecast_discussion_notifier.data import MesoscaleDiscussion
+from noaa_notifier.data import MesoscaleDiscussion
 
 
 class DatabaseHandler:
