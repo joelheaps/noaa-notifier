@@ -22,4 +22,3 @@ y_min = min(coord[1] for coord in coords)
 y_max = max(coord[1] for coord in coords)
 
 # Print in form {xmin: -104, ymin: 35.6, xmax: -94.32, ymax: 41}
-print(f"{{xmin: {x_min}, ymin: {y_min}, xmax: {x_max}, ymax: {y_max}}}")
