@@ -1,6 +1,6 @@
 import pytest
 
-from src.forecast_discussion_notifier.notifier import (
+from forecast_discussion_notifier.app import (
     MesoscaleDiscussion,
     notify_discord,
 )

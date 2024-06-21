@@ -14,4 +14,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src/forecast_discussion_notifier .
 
 # Set the command to run when the container starts
-CMD ["python", "-u", "-m", "forecast_discussion_notifier.notifier"]
+CMD ["python", "-u", "-m", "forecast_discussion_notifier.app"]
