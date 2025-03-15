@@ -61,10 +61,8 @@ def notify_discord(
             ],
         },
     )
-    try:
-        result.raise_for_status()
-    except Exception:
-        logger.exception()
+
+    result.raise_for_status()
 
 
 def check_skip(
