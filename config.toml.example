@@ -1,0 +1,13 @@
+[urls]
+noaa_rss_feed_url = "https://www.spc.noaa.gov/products/spcrss.xml"
+discord_webhook_url = "https://discord.com/api/webhooks/1350181120154538074/HrSBKDd1x8UYltT6Ub58bcQhHhiVT_8RTsvYLdiGfVzZmmVnRDXViWfhTgL5APLnhZI2"
+
+[storage]
+seen_alerts_cache = "./seen_alerts.json"
+
+[filters]
+skip_title_terms = ["No watches are valid", "Fire"]
+skip_summary_terms = ["HAS NOT BEEN ISSUED YET"]
+
+# Summary must include only one of the following terms.
+summary_must_include = ["Nebraska", "Iowa"]
