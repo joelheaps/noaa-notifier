@@ -10,6 +10,7 @@ dependencies = [
     "schedule>=1.2.2",
     "pydantic>=2.7.4",
     "feedparser>=6.0.11",
+    "tomli>=2.2.1",
 ]
 readme = "README.md"
 license = { text = "MIT" }
