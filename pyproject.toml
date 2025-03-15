@@ -9,19 +9,17 @@ dependencies = [
     "lxml>=5.2.2",
     "schedule>=1.2.2",
     "pydantic>=2.7.4",
+    "feedparser>=6.0.11",
 ]
-requires-python = "==3.11.*"
 readme = "README.md"
 license = { text = "MIT" }
-
-
-[tool.pdm]
-distribution = false
-
-[tool.pdm.dev-dependencies]
-dev = ["ruff>=0.4.10", "pytest>=8.2.2"]
 
 [tool.ruff.lint]
 # Enable all rules, with exceptions
 select = ["ALL"]
-ignore = ["D", "S101", "ANN101", "ANN102", "COM812", "ISC001"]
+ignore = ["D", "S101", "ANN101", "ANN102", "COM812", "ISC001", "ERA001", "T201", "PGH003"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+]
