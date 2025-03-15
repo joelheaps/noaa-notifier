@@ -116,11 +116,16 @@ def main() -> None:
     feed = feedparser.parse(NOAA_RSS_FEED_URL)
 
     for item in feed["entries"]:
-        hash_ = get_hash(item)
+        try:
+            hash_ = get_hash(item["summary"])
+        except KeyError:
+            logger.error("Skipping entry with empty summary.", title=item["title"])
+            continue
 
         # Skip seen alerts
         if hash_ in seen_alerts:
             logger.info("Skipping previously seen product.", title=item["title"])
+            seen_alerts.add(hash_)
             continue
 
         # Check skip based on ignore terms
@@ -129,6 +134,7 @@ def main() -> None:
                 "Skipping product; title or summary contained unwanted term.",
                 title=item["title"],
             )
+            seen_alerts.add(hash_)
             continue
 
         # Check matches filter
@@ -137,6 +143,7 @@ def main() -> None:
                 "Skipping product; summary did not include at least one necessary term.",
                 terms=SUMMARY_MUST_INCLUDE,
             )
+            seen_alerts.add(hash_)
             continue
 
         # Send notification
@@ -157,6 +164,7 @@ if __name__ == "__main__":
     if args.loop:
         while True:
             main()
+            logger.info("Sleeping for 60 seconds.")
             sleep(60)
     else:
         main()

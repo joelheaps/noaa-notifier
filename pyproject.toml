@@ -3,6 +3,7 @@ name = "noaa-notifier"
 version = "0.1.0"
 description = "Default template for PDM package"
 authors = [{ name = "Joel Heaps", email = "joel@joelheaps.com" }]
+requires-python = ">=3.13"
 dependencies = [
     "httpx>=0.27.0",
     "structlog>=24.2.0",
@@ -18,9 +19,17 @@ license = { text = "MIT" }
 [tool.ruff.lint]
 # Enable all rules, with exceptions
 select = ["ALL"]
-ignore = ["D", "S101", "ANN101", "ANN102", "COM812", "ISC001", "ERA001", "T201", "PGH003"]
+ignore = [
+    "D",
+    "S101",
+    "ANN101",
+    "ANN102",
+    "COM812",
+    "ISC001",
+    "ERA001",
+    "T201",
+    "PGH003",
+]
 
 [dependency-groups]
-dev = [
-    "pytest>=8.3.5",
-]
+dev = ["pytest>=8.3.5"]
