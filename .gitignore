@@ -163,3 +163,6 @@ cython_debug/
 
 # Sqlite database files
 *.db
+
+# Json files
+*.json
