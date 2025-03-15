@@ -1,17 +1,16 @@
 from __future__ import annotations
-import argparse
 
+import argparse
 import json
 import re
 from hashlib import sha256
 from pathlib import Path
 from time import sleep
-from typing import Any
 
 import feedparser
 import httpx
-import tomli
 import structlog
+import tomli
 
 logger = structlog.get_logger()
 
@@ -22,8 +21,8 @@ with open("config.toml", "rb") as f:
 NOAA_RSS_FEED_URL: str = config["urls"]["noaa_rss_feed_url"]
 DISCORD_WEBHOOK_URL: str = config["urls"]["discord_webhook_url"]
 SEEN_ALERTS_CACHE = Path(config["storage"]["seen_alerts_cache"])
-SKIP_TITLE_TERMS: list[str] = config["filters"]["skip_title_terms"]
-SKIP_SUMMARY_TERMS: list[str] = config["filters"]["skip_summary_terms"]
+TITLE_MUST_NOT_INCLUDE: list[str] = config["filters"]["title_must_not_include"]
+SUMMARY_MUST_NOT_INCLUDE: list[str] = config["filters"]["summary_must_not_include"]
 SUMMARY_MUST_INCLUDE: list[str] = config["filters"]["summary_must_include"]
 
 CLEAN_HTML_REGEX = re.compile("<.*?>")
@@ -65,25 +64,8 @@ def notify_discord(
     result.raise_for_status()
 
 
-def check_skip(
-    entry: feedparser.FeedParserDict,
-    skip_title_terms: list[str] = SKIP_TITLE_TERMS,
-    skip_summary_terms: list[str] = SKIP_SUMMARY_TERMS,
-) -> bool:
-    return check_contains_term(skip_title_terms, entry["title"]) or check_contains_term(  # type: ignore
-        skip_summary_terms,
-        entry["summary"],  # type: ignore
-    )
-
-
-def check_contains_term(terms: list[str], string_: str) -> bool:
-    """Check if string contains at least one of the terms provided."""
-    string_ = string_.lower()
-    return any(term.lower() in string_ for term in terms)
-
-
 def get_hash(entry: feedparser.FeedParserDict) -> str:
-    """Generate a hash for a dictionary. Used for deduplicating alerts."""
+    """Generate a hash for a dictionary or string. Used for deduplicating alerts."""
     as_str = json.dumps(entry)
     return sha256(as_str.encode()).hexdigest()
 
@@ -109,6 +91,34 @@ def store_seen_alerts(
         json.dump(seen_alerts_as_list, f, indent=4)
 
 
+def _check_contains_term(terms: list[str], string_: str) -> bool:
+    """Check if string contains at least one of the terms provided."""
+    string_ = string_.lower()
+    return any(term.lower() in string_ for term in terms)
+
+
+def check_passes_term_filters(entry: feedparser.FeedParserDict) -> str | None:
+    """Determines whether an entry contains wanted and unwanted terms."""
+    # Check summary contains at least one necessary term
+    if not _check_contains_term(SUMMARY_MUST_INCLUDE, entry["summary"]):  # type: ignore
+        logger.info(
+            "Skipping product; summary did not include at least one necessary term.",
+            terms=SUMMARY_MUST_INCLUDE,
+        )
+        return False
+
+    # Check title and summary for unwanted terms
+    if _check_contains_term(
+        TITLE_MUST_NOT_INCLUDE, entry["title"]
+    ) or _check_contains_term(SUMMARY_MUST_NOT_INCLUDE, entry["summary"]):  # type: ignore
+        logger.info(
+            "Skipping product; title or summary contained unwanted term.",
+            title=item["title"],
+        )
+        return False
+    return True
+
+
 def main() -> None:
     seen_alerts: set[str] = load_seen_alerts()
     feed = feedparser.parse(NOAA_RSS_FEED_URL)
@@ -117,7 +127,7 @@ def main() -> None:
         try:
             hash_ = get_hash(item["summary"])
         except KeyError:
-            logger.error("Skipping entry with empty summary.", title=item["title"])
+            logger.exception("Skipping entry with empty summary.", title=item["title"])
             continue
 
         # Skip seen alerts
@@ -126,30 +136,16 @@ def main() -> None:
             seen_alerts.add(hash_)
             continue
 
-        # Check skip based on ignore terms
-        if check_skip(item):  # type: ignore
-            logger.info(
-                "Skipping product; title or summary contained unwanted term.",
-                title=item["title"],
-            )
-            seen_alerts.add(hash_)
-            continue
-
-        # Check matches filter
-        if not check_contains_term(SUMMARY_MUST_INCLUDE, item["summary"]):  # type: ignore
-            logger.info(
-                "Skipping product; summary did not include at least one necessary term.",
-                terms=SUMMARY_MUST_INCLUDE,
-            )
-            seen_alerts.add(hash_)
+        if not check_passes_term_filters(item):
             continue
 
         # Send notification
         try:
             notify_discord(item)
-            seen_alerts.add(hash_)
-        except Exception as e:
-            logger.warning("Error sending message for product.", title=item["title"], error=str(e))
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                "Error sending message for product.", title=item["title"], error=str(e)
+            )
 
     store_seen_alerts(seen_alerts)
 

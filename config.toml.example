@@ -6,8 +6,8 @@ discord_webhook_url = "https://discord.com/api/webhooks/1350181120154538074/HrSB
 seen_alerts_cache = "./seen_alerts.json"
 
 [filters]
-skip_title_terms = ["No watches are valid", "Fire"]
-skip_summary_terms = ["HAS NOT BEEN ISSUED YET"]
+title_must_not_include = ["No watches are valid", "Fire"]
+summary_must_not_include = ["HAS NOT BEEN ISSUED YET"]
 
 # Summary must include only one of the following terms.
-summary_must_include = ["Nebraska", "Iowa"]
+summary_must_include = ["Nebraska", "Iowa", "Oklahoma"]
