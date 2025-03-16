@@ -4,4 +4,5 @@ services:
       context: .
     volumes:
       - ./config.toml:/app/config.toml
+      - ./storage:/app/storage
     restart: always
