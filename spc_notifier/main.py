@@ -85,7 +85,10 @@ def load_seen_alerts(seen_alerts_file: Path = SEEN_ALERTS_CACHE) -> set[str]:
 def store_seen_alerts(
     seen_alerts: set[str], seen_alerts_file: Path = SEEN_ALERTS_CACHE
 ) -> None:
-    logger.info("Storing seen alerts.", count=len(seen_alerts))
+    logger.info("Storing seen alerts.", count=len(seen_alerts))i
+
+    seen_alerts_file.parent.mkdir(parents=True, exist_ok=True)
+    
     with seen_alerts_file.open("w") as f:
         seen_alerts_as_list = list(seen_alerts)
         json.dump(seen_alerts_as_list, f, indent=4)
@@ -137,11 +140,13 @@ def main() -> None:
             continue
 
         if not check_passes_term_filters(item):
+            seen_alerts.add(hash_)
             continue
 
         # Send notification
         try:
             notify_discord(item)
+            seen_alerts.add(hash_)
         except Exception as e:  # noqa: BLE001
             logger.warning(
                 "Error sending message for product.", title=item["title"], error=str(e)
