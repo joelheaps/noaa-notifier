@@ -85,9 +85,8 @@ def load_seen_alerts(seen_alerts_file: Path = SEEN_ALERTS_CACHE) -> set[str]:
 def store_seen_alerts(
     seen_alerts: set[str], seen_alerts_file: Path = SEEN_ALERTS_CACHE
 ) -> None:
-    logger.info("Storing seen alerts.", count=len(seen_alerts))i
+    logger.info("Storing seen alerts.", count=len(seen_alerts))
 
-    seen_alerts_file.parent.mkdir(parents=True, exist_ok=True)
     
     with seen_alerts_file.open("w") as f:
         seen_alerts_as_list = list(seen_alerts)
@@ -159,6 +158,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--loop", action="store_true", help="Run in continuous loop")
     args = parser.parse_args()
+
+    logger.info("Ensuring storage path for seen alerts cache exists.")
+    SEEN_ALERTS_CACHE.parent.mkdir(parents=True, exist_ok=True)
 
     if args.loop:
         while True:
