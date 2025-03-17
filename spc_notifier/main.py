@@ -87,7 +87,7 @@ def store_seen_alerts(
 ) -> None:
     logger.info("Storing seen alerts.", count=len(seen_alerts))
 
-    
+
     with seen_alerts_file.open("w") as f:
         seen_alerts_as_list = list(seen_alerts)
         json.dump(seen_alerts_as_list, f, indent=4)
@@ -106,6 +106,7 @@ def check_passes_term_filters(entry: feedparser.FeedParserDict) -> str | None:
         logger.info(
             "Skipping product; summary did not include at least one necessary term.",
             terms=SUMMARY_MUST_INCLUDE,
+            title=entry["title"]
         )
         return False
 
@@ -115,7 +116,7 @@ def check_passes_term_filters(entry: feedparser.FeedParserDict) -> str | None:
     ) or _check_contains_term(SUMMARY_MUST_NOT_INCLUDE, entry["summary"]):  # type: ignore
         logger.info(
             "Skipping product; title or summary contained unwanted term.",
-            title=item["title"],
+            title=entry["title"],
         )
         return False
     return True
