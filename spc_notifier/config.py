@@ -1,10 +1,21 @@
+# NOAA Storm Prediction Center RSS feed URL.  This shouldn't change.
 NOAA_RSS_FEED_URL = "https://www.spc.noaa.gov/products/spcrss.xml"
-DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1350300210802331719/otGXhPOnF-cNYklzsbnO0dJm_ehD8GcWdMlz6V2O6vv7karUO0CAFrdbt1DJYxp9Yot1"
 
+# Enter a webhook URL to send Discord notifications to your channel.
+DISCORD_WEBHOOK_URL = "webhook url here"
+
+# Enter a user or role ID to ping when a Discord notification is sent (or leave empty).
+# See https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID
+DISCORD_PING_USER_OR_ROLE_ID = ""
+
+# Stores most recently seen alerts to deduplicate notifications.
 SEEN_ALERTS_CACHE = "./seen_alerts.json"
 
+# All product entries with these terms in the title will be ignored.
 TITLE_MUST_NOT_INCLUDE = ["No watches are valid", "Fire"]
+
+# All product entries with these terms in the summary will be ignored.
 SUMMARY_MUST_NOT_INCLUDE = ["HAS NOT BEEN ISSUED YET"]
 
-# Summary must only include one term
+# Product entries must contain at least one of these terms.  All other entries will be ignored.
 SUMMARY_MUST_INCLUDE = ["Nebraska", "Iowa", "Oklahoma"]

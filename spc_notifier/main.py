@@ -22,6 +22,7 @@ logger = structlog.get_logger()
 _SEEN_ALERTS_CACHE = Path("./seen_alerts.json")
 SEEN_ALERTS_CACHE_SIZE: int = 500
 
+
 def get_hash(entry: feedparser.FeedParserDict) -> str:
     """Generate a hash for a dictionary or string. Used for deduplicating alerts."""
     as_str = json.dumps(entry)

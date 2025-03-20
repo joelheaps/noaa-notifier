@@ -4,7 +4,7 @@ import httpx
 import structlog
 from feedparser import FeedParserDict
 
-from spc_notifier.config import DISCORD_WEBHOOK_URL
+from spc_notifier.config import DISCORD_PING_USER_OR_ROLE_ID, DISCORD_WEBHOOK_URL
 
 logger = structlog.get_logger()
 
@@ -28,13 +28,19 @@ def send_discord_alert(
     )
 
     # Summaries contain HTML tags that Discord can't display properly.
-    # Cleanup summary text
     entry["summary"] = cleanup_summary(entry["summary"])  # type: ignore
+
+    # Ping user or role if configured
+    message_text = (
+        f"<@{DISCORD_PING_USER_OR_ROLE_ID}> {entry['title']}"
+        if DISCORD_PING_USER_OR_ROLE_ID
+        else entry["title"]
+    )
 
     result = httpx.post(
         webhook_url,
         json={
-            "content": entry["title"],
+            "content": message_text,
             "embeds": [
                 {
                     "title": entry["title"],
