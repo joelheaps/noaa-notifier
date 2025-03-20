@@ -8,6 +8,7 @@ from spc_notifier.config import DISCORD_WEBHOOK_URL
 
 logger = structlog.get_logger()
 
+
 CLEAN_HTML_REGEX = re.compile("<.*?>")
 
 

@@ -20,7 +20,7 @@ from spc_notifier.config import (
 logger = structlog.get_logger()
 
 _SEEN_ALERTS_CACHE = Path("./seen_alerts.json")
-
+SEEN_ALERTS_CACHE_SIZE: int = 500
 
 def get_hash(entry: feedparser.FeedParserDict) -> str:
     """Generate a hash for a dictionary or string. Used for deduplicating alerts."""
@@ -44,9 +44,12 @@ def store_seen_alerts(
     seen_alerts: set[str], seen_alerts_file: Path = _SEEN_ALERTS_CACHE
 ) -> None:
     logger.info("Storing seen alerts.", count=len(seen_alerts), path=seen_alerts_file)
+    logger.info("Storing seen alerts.", count=len(seen_alerts))
+
+    seen_alerts_as_list = list(seen_alerts)
+    seen_alerts_as_list[-SEEN_ALERTS_CACHE_SIZE:]
 
     with seen_alerts_file.open("w") as f:
-        seen_alerts_as_list = list(seen_alerts)
         json.dump(seen_alerts_as_list, f, indent=4)
 
 
