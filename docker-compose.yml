@@ -3,6 +3,6 @@ services:
     build:
       context: .
     volumes:
-      - ./config.toml:/app/config.toml
+      - ./spc_notifier/config.py:/app/spc_notifier/config.py
       - ./storage:/app/storage
     restart: always

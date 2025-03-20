@@ -12,6 +12,7 @@ import structlog
 from spc_notifier.alerting.discord import send_discord_alert
 from spc_notifier.config import (
     NOAA_RSS_FEED_URL,
+    SEEN_ALERTS_CACHE,
     SUMMARY_MUST_INCLUDE,
     SUMMARY_MUST_NOT_INCLUDE,
     TITLE_MUST_NOT_INCLUDE,
@@ -19,7 +20,7 @@ from spc_notifier.config import (
 
 logger = structlog.get_logger()
 
-_SEEN_ALERTS_CACHE = Path("./seen_alerts.json")
+_SEEN_ALERTS_CACHE = Path(SEEN_ALERTS_CACHE)
 SEEN_ALERTS_CACHE_SIZE: int = 500
 
 
