@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from hashlib import sha256
 from pathlib import Path
 from time import sleep
@@ -47,7 +46,6 @@ def store_seen_alerts(
     seen_alerts: set[str], seen_alerts_file: Path = _SEEN_ALERTS_CACHE
 ) -> None:
     logger.info("Storing seen alerts.", count=len(seen_alerts), path=seen_alerts_file)
-    logger.info("Storing seen alerts.", count=len(seen_alerts))
 
     seen_alerts_as_list = list(seen_alerts)
     seen_alerts_as_list[-SEEN_ALERTS_CACHE_SIZE:]
@@ -89,6 +87,10 @@ def main() -> None:
     seen_alerts: set[str] = load_seen_alerts()
     feed = feedparser.parse(NOAA_RSS_FEED_URL)
 
+    logger.info("Retrieved SPC product entries from NOAA RSS feed.", count=len(feed["entries"]))
+
+    seen_count = 0  # Just used for generating a message later
+
     for item in feed["entries"]:
         try:
             hash_ = get_hash(item["summary"])
@@ -98,7 +100,7 @@ def main() -> None:
 
         # Skip seen alerts
         if hash_ in seen_alerts:
-            logger.info("Skipping previously seen product.", title=item["title"])
+            seen_count += 1
             seen_alerts.add(hash_)
             continue
 
@@ -106,17 +108,16 @@ def main() -> None:
             seen_alerts.add(hash_)
             continue
 
-        send_discord_alert(item)
-        # # Send notification
-        # try:
+        # Send notification
+        try:
+            send_discord_alert(item)
+            seen_alerts.add(hash_)
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                "Error sending message for product.", title=item["title"], error=str(e)
+            )
 
-        #     seen_alerts.add(hash_)
-        # except Exception as e:
-        #     logger.warning(
-        #         "Error sending message for product.", title=item["title"], error=str(e)
-        #     )
-        sys.exit()
-
+    logger.info("Skipped previously seen products.", count=seen_count)
     store_seen_alerts(seen_alerts)
 
 
