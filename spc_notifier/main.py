@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from hashlib import sha256
 from pathlib import Path
 from time import sleep
@@ -9,7 +10,6 @@ from time import sleep
 import feedparser
 import structlog
 
-from spc_notifier.alerting.discord import send_discord_alert
 from spc_notifier.config import (
     NOAA_RSS_FEED_URL,
     SEEN_ALERTS_CACHE,
@@ -17,6 +17,7 @@ from spc_notifier.config import (
     SUMMARY_MUST_NOT_INCLUDE,
     TITLE_MUST_NOT_INCLUDE,
 )
+from spc_notifier.messaging import send_discord_alert
 
 logger = structlog.get_logger()
 
@@ -105,14 +106,16 @@ def main() -> None:
             seen_alerts.add(hash_)
             continue
 
-        # Send notification
-        try:
-            send_discord_alert(item)
-            seen_alerts.add(hash_)
-        except Exception as e:  # noqa: BLE001
-            logger.warning(
-                "Error sending message for product.", title=item["title"], error=str(e)
-            )
+        send_discord_alert(item)
+        # # Send notification
+        # try:
+
+        #     seen_alerts.add(hash_)
+        # except Exception as e:
+        #     logger.warning(
+        #         "Error sending message for product.", title=item["title"], error=str(e)
+        #     )
+        sys.exit()
 
     store_seen_alerts(seen_alerts)
 

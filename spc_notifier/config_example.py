@@ -2,7 +2,12 @@
 NOAA_RSS_FEED_URL = "https://www.spc.noaa.gov/products/spcrss.xml"
 
 # Enter a webhook URL to send Discord notifications to your channel.
-DISCORD_WEBHOOK_URL = "webhook url here"
+DISCORD_WEBHOOK_URL = ""
+
+# Enable LLM-generated summaries for SPC products.
+ENABLE_LLM_SUMMARIES = False
+CLAUDE_API_KEY = ""
+CLAUDE_MODEL = "claude-3-5-sonnet-20241022"  # https://docs.anthropic.com/en/docs/about-claude/models/all-models#model-comparison-table
 
 # Enter a user or role ID to ping when a Discord notification is sent (or leave empty).
 # See https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID
