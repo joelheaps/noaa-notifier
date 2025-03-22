@@ -14,7 +14,7 @@ CLAUDE_MODEL = "claude-3-5-sonnet-20241022"  # https://docs.anthropic.com/en/doc
 DISCORD_PING_USER_OR_ROLE_ID = ""
 
 # Stores most recently seen alerts to deduplicate notifications.
-SEEN_ALERTS_CACHE = "./seen_alerts.json"
+SEEN_ALERTS_CACHE = "storage/seen_alerts.json"
 
 # All product entries with these terms in the title will be ignored.
 TITLE_MUST_NOT_INCLUDE = ["No watches are valid", "Fire"]

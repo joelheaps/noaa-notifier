@@ -2,7 +2,7 @@ import re
 
 import httpx
 import structlog
-from feedparser import FeedParserDict
+from stamina import retry
 
 from spc_notifier.config import (
     CLAUDE_API_KEY,
@@ -14,10 +14,8 @@ from spc_notifier.config import (
 
 logger = structlog.get_logger()
 
-
-CLEAN_HTML_REGEX = re.compile("<.*?>")
 CLAUDE_MAX_TOKENS = 1024
-__CLAUDE_API_CALL_HEADERS = {
+CLAUDE_API_CALL_HEADERS = {
     "x-api-key": CLAUDE_API_KEY,
     "Content-Type": "application/json",
     "Anthropic-Version": "2023-06-01",
@@ -25,9 +23,12 @@ __CLAUDE_API_CALL_HEADERS = {
 CLAUDE_PROMPT = (
     "Summarize this National Weather Service Storm Prediction Center text concisely."
 )
+CLEAN_HTML_REGEX = re.compile("<.*?>")
+NUMBERED_LINE_REGEX = re.compile(r"^\d+\.")
 
 
 def _cleanup_summary(string_: str) -> str:
+    """Remove HTML tags and related content from product summary."""
     cleaned = re.sub(CLEAN_HTML_REGEX, "", string_)
     cleaned = cleaned.replace("Read more", "")
     return cleaned.strip()
@@ -38,7 +39,7 @@ def _cleanup_llm_response(response_text: str) -> str:
     if response_text.startswith("#"):
         response_text = "\n".join(response_text.split("\n")[1:])
 
-    # Drop first line if it contains the word "summary"
+    # Drop next (first) line if it contains the word "summary"
     _first_line = response_text.split("\n")[0]
     if "summary" in _first_line.lower():
         response_text = "\n".join(response_text.split("\n")[1:])
@@ -46,7 +47,7 @@ def _cleanup_llm_response(response_text: str) -> str:
     # Add an extra newline after lines starting with a number (Discord formatting issue)
     response_text = "\n".join(
         [
-            line + "\n" if re.match(r"^\d+\.", line) else line
+            line + "\n" if re.match(NUMBERED_LINE_REGEX, line) else line
             for line in response_text.split("\n")
         ]
     )
@@ -54,6 +55,7 @@ def _cleanup_llm_response(response_text: str) -> str:
     return response_text.strip()
 
 
+@retry(on=httpx.HTTPError, attempts=3)
 def _summarize_with_llm(summary: str) -> str:
     logger.info("Generating LLM summary using Claude", model=CLAUDE_MODEL)
     data = {
@@ -69,7 +71,7 @@ def _summarize_with_llm(summary: str) -> str:
 
     response = httpx.post(
         "https://api.anthropic.com/v1/messages",
-        headers=__CLAUDE_API_CALL_HEADERS,
+        headers=CLAUDE_API_CALL_HEADERS,
         json=data,
         timeout=30,
     )
@@ -98,19 +100,29 @@ def get_message_text(title: str, summary: str) -> str:
     return message_text
 
 
-def send_discord_alert(
-    entry: FeedParserDict,
+def send_discord_message(
+    title: str,
+    summary: str,
+    link: str,
     webhook_url: str = DISCORD_WEBHOOK_URL,
 ) -> None:
     """Sends Discord message containing summary and link to SPC alert."""
-    logger.info(
-        "Notifying Discord of new NOAA alert or product.", product=entry["title"]
-    )
+    logger.info("Notifying Discord of new NOAA alert or product.", product=title)
 
-    summary = _cleanup_summary(entry["summary"])  # Remove HTML tags
-    title = entry["title"]
+    summary = _cleanup_summary(summary)  # Remove HTML tags
     message_text = get_message_text(title, summary)
 
+    _send_discord_message(message_text, title, summary, link, webhook_url)
+
+
+@retry(on=httpx.HTTPError, attempts=3)
+def _send_discord_message(
+    message_text: str,
+    title: str,
+    summary: str,
+    link: str,
+    webhook_url: str = DISCORD_WEBHOOK_URL,
+) -> None:
     result = httpx.post(
         webhook_url,
         json={
@@ -118,7 +130,7 @@ def send_discord_alert(
             "embeds": [
                 {
                     "title": title,
-                    "url": entry["link"],
+                    "url": link,
                     "description": summary,
                 },
             ],
