@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections import deque
 from hashlib import sha256
 from pathlib import Path
 from time import sleep
@@ -40,24 +41,21 @@ def load_seen_alerts(seen_alerts_file: Path = _SEEN_ALERTS_CACHE) -> set[str]:
     logger.info("Loading previously seen alerts.", path=seen_alerts_file)
     try:
         with seen_alerts_file.open("r") as f:
-            seen_alerts: set[str] = set(json.load(f))
+            seen_alerts: deque[str] = deque(json.load(f), maxlen=SEEN_ALERTS_CACHE_SIZE)
         logger.info("Loaded previously seen alerts.", count=len(seen_alerts))
     except FileNotFoundError:
         logger.info("Could not load previously seen alerts; file does not exist.")
-        seen_alerts = set()
+        seen_alerts: deque[str] = deque(maxlen=SEEN_ALERTS_CACHE_SIZE)
     return seen_alerts
 
 
 def store_seen_alerts(
-    seen_alerts: set[str], seen_alerts_file: Path = _SEEN_ALERTS_CACHE
+    seen_alerts: deque[str], seen_alerts_file: Path = _SEEN_ALERTS_CACHE
 ) -> None:
     logger.info("Storing seen alerts.", count=len(seen_alerts), path=seen_alerts_file)
 
-    seen_alerts_as_list = list(seen_alerts)
-    seen_alerts_as_list = seen_alerts_as_list[-SEEN_ALERTS_CACHE_SIZE:]
-
     with seen_alerts_file.open("w") as f:
-        json.dump(seen_alerts_as_list, f, indent=4)
+        json.dump(list(seen_alerts), f, indent=4)
 
 
 def _check_contains_term(terms: list[str], string_: str) -> bool:
@@ -90,8 +88,8 @@ def check_passes_term_filters(title: str, summary: str) -> bool:
 
 
 def process_feed_entries(
-    feed: feedparser.FeedParserDict, seen_alerts: set[str]
-) -> set[str]:
+    feed: feedparser.FeedParserDict, seen_alerts: deque[str]
+) -> deque[str]:
     seen_count = 0  # Just used for generating a message later
 
     for item in feed["entries"]:
@@ -107,16 +105,16 @@ def process_feed_entries(
 
         if hash_ in seen_alerts:
             seen_count += 1
-            seen_alerts.add(hash_)
+            seen_alerts.append(hash_)
             continue
 
         if not check_passes_term_filters(title, summary):
-            seen_alerts.add(hash_)
+            seen_alerts.append(hash_)
             continue
 
         try:
             send_discord_message(title, summary, link)
-            seen_alerts.add(hash_)
+            seen_alerts.append(hash_)
         except Exception as e:  # noqa: BLE001
             logger.warning(
                 "Error sending message for product.", title=title, error=str(e)
@@ -132,7 +130,7 @@ def main(loop: bool) -> None:  # noqa: FBT001
     logger.info("Ensuring storage path for seen alerts cache exists.")
     _SEEN_ALERTS_CACHE.parent.mkdir(parents=True, exist_ok=True)
 
-    seen_alerts: set[str] = load_seen_alerts()
+    seen_alerts: deque[str] = load_seen_alerts()
 
     while True:
         feed = feedparser.parse(NOAA_RSS_FEED_URL)
