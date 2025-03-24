@@ -17,10 +17,10 @@ DISCORD_PING_USER_OR_ROLE_ID = ""
 SEEN_ALERTS_CACHE = "storage/seen_alerts.json"
 
 # All product entries with these terms in the title will be ignored.
-TITLE_MUST_NOT_INCLUDE = ["No watches are valid", "Fire"]
+TITLE_MUST_NOT_INCLUDE = ["No watches are valid", "No MDs are in effect"]
 
 # All product entries with these terms in the summary will be ignored.
-SUMMARY_MUST_NOT_INCLUDE = ["HAS NOT BEEN ISSUED YET"]
+SUMMARY_MUST_NOT_INCLUDE = ["Has not been issued yet"]
 
 # Product entries must contain at least one of these terms.  All other entries will be ignored.
 SUMMARY_MUST_INCLUDE = ["Nebraska", "Iowa", "Oklahoma"]
