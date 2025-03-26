@@ -1,4 +1,5 @@
 import re
+from functools import lru_cache
 
 import httpx
 import structlog
@@ -7,10 +8,9 @@ from stamina import retry
 from spc_notifier.config import (
     CLAUDE_API_KEY,
     CLAUDE_MODEL,
-    DISCORD_PING_USER_OR_ROLE_ID,
-    DISCORD_WEBHOOK_URL,
     ENABLE_LLM_SUMMARIES,
 )
+from spc_notifier.models import SpcProduct, WebhookConfig
 
 logger = structlog.get_logger()
 
@@ -55,6 +55,7 @@ def _cleanup_llm_response(response_text: str) -> str:
     return response_text.strip()
 
 
+@lru_cache(maxsize=32)
 @retry(on=httpx.HTTPError, attempts=3)
 def _summarize_with_llm(summary: str) -> str:
     logger.info("Generating LLM summary using Claude", model=CLAUDE_MODEL)
@@ -82,13 +83,9 @@ def _summarize_with_llm(summary: str) -> str:
     return _cleanup_llm_response(response_text)
 
 
-def get_message_text(title: str, summary: str) -> str:
+def get_message_text(title: str, summary: str, ping_id: str) -> str:
     # Begin with product title, preceded by user or role mention if configured
-    message_text = (
-        f"<@{DISCORD_PING_USER_OR_ROLE_ID}>\n**{title}**"
-        if DISCORD_PING_USER_OR_ROLE_ID
-        else f"**{title}**"
-    )
+    message_text = f"<@{ping_id}>\n**{title}**" if ping_id else f"**{title}**"
 
     # Generate a more concise summary using an LLM if enabled
     if ENABLE_LLM_SUMMARIES:
@@ -101,18 +98,26 @@ def get_message_text(title: str, summary: str) -> str:
 
 
 def send_discord_message(
-    title: str,
-    summary: str,
-    link: str,
-    webhook_url: str = DISCORD_WEBHOOK_URL,
+    product: SpcProduct,
+    webhook_config: WebhookConfig,
 ) -> None:
     """Sends Discord message containing summary and link to SPC alert."""
-    logger.info("Notifying Discord of new NOAA alert or product.", product=title)
+    logger.info(
+        "Notifying Discord of new NOAA alert or product.", product=product.title
+    )
 
-    summary = _cleanup_summary(summary)  # Remove HTML tags
-    message_text = get_message_text(title, summary)
+    cleaned_summary = _cleanup_summary(product.summary)  # Remove HTML tags
+    message_text = get_message_text(
+        product.title, product.summary, webhook_config.ping_user_or_role_id
+    )
 
-    _send_discord_message(message_text, title, summary, link, webhook_url)
+    _send_discord_message(
+        message_text,
+        product.title,
+        cleaned_summary,
+        product.link,
+        webhook_config.webhook_url,
+    )
 
 
 @retry(on=httpx.HTTPError, attempts=3)
@@ -121,7 +126,7 @@ def _send_discord_message(
     title: str,
     summary: str,
     link: str,
-    webhook_url: str = DISCORD_WEBHOOK_URL,
+    webhook_url: str,
 ) -> None:
     result = httpx.post(
         webhook_url,
