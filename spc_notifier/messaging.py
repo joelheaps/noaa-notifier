@@ -9,11 +9,13 @@ from spc_notifier.config import (
     CLAUDE_API_KEY,
     CLAUDE_MODEL,
     ENABLE_LLM_SUMMARIES,
+    LOG_MODE,
     WEBHOOKS,
 )
 from spc_notifier.models import SpcProduct, TermFilters, WebhookConfig
 
-logger = structlog.get_logger()
+structlog.configure(wrapper_class=structlog.make_filtering_bound_logger(LOG_MODE))
+logger = structlog.get_logger(__name__)
 
 CLAUDE_MAX_TOKENS = 1024
 CLAUDE_API_CALL_HEADERS = {

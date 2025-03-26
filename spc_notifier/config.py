@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 import tomli
@@ -12,6 +13,8 @@ ENABLE_LLM_SUMMARIES = config.get("enable_llm_summaries", False)
 CLAUDE_API_KEY = config.get("claude_api_key", "")
 CLAUDE_MODEL = config.get("claude_model", "")
 SEEN_ALERTS_CACHE = config.get("seen_alerts_cache", "storage/seen_alerts.json")
+__DEBUG_MODE = config.get("debug_mode", False)
+LOG_MODE = logging.DEBUG if __DEBUG_MODE else logging.INFO
 WEBHOOKS = [
     WebhookConfig(**webhook_config) for webhook_config in config["discord_webhooks"]
 ]

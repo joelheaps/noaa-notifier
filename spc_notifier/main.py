@@ -15,7 +15,8 @@ from spc_notifier.config import NOAA_RSS_FEED_URL, SEEN_ALERTS_CACHE
 from spc_notifier.messaging import submit_for_notification
 from spc_notifier.models import SpcProduct
 
-logger = structlog.get_logger()
+structlog.configure(wrapper_class=structlog.make_filtering_bound_logger(LOG_MODE))
+logger = structlog.get_logger(__name__)
 
 POLL_INTERVAL_SECONDS: int = 60
 _SEEN_PRODUCTS_CACHE = Path(SEEN_ALERTS_CACHE)
@@ -32,7 +33,6 @@ def save_seen_products(
     """Save seen products to disk."""
     with cache_file.open("w") as f:
         json.dump(list(products), f, indent=4)
-    logger.info("Stored SPC product cache to disk.", count=len(products))
 
 
 def load_seen_products(cache_file: Path = _SEEN_PRODUCTS_CACHE) -> deque[SpcProduct]:
@@ -45,9 +45,7 @@ def load_seen_products(cache_file: Path = _SEEN_PRODUCTS_CACHE) -> deque[SpcProd
     except FileNotFoundError:
         return deque(maxlen=SPC_PRODUCT_CACHE_SIZE)
     except json.JSONDecodeError:
-        logger.exception(
-            "Failed to load SPC product cache from disk. Creating empty cache."
-        )
+        logger.exception("Failed to load cache from disk. Creating empty cache.")
         return deque(maxlen=SPC_PRODUCT_CACHE_SIZE)
 
 
@@ -76,7 +74,7 @@ def process_feed_entries(
             continue
 
         if hash_ in seen_products:
-            logger.debug("Product previously seen.", title=product.title)
+            logger.debug("Product previously seen product.", title=product.title)
             seen_count += 1
             continue
 
@@ -85,7 +83,7 @@ def process_feed_entries(
             send_success = True
         except Exception as e:  # noqa: BLE001
             logger.warning(
-                "Error sending message for product.",
+                "Error sending message for product. Will retry during next loop.",
                 title=product.title,
                 error=str(e),
             )
