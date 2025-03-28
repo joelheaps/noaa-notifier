@@ -60,10 +60,9 @@ def _cleanup_llm_response(response_text: str) -> str:
 
 
 @lru_cache(maxsize=32)
-@retry(on=httpx.HTTPError, attempts=3)
-def _summarize_with_llm(summary: str) -> str:
-    logger.info("Generating LLM summary using Claude", model=CLAUDE_MODEL)
-    data = {
+def _build_claude_request(summary: str) -> dict:
+    logger.debug("Building Claude request.")
+    return {
         "model": CLAUDE_MODEL,
         "max_tokens": CLAUDE_MAX_TOKENS,
         "messages": [
@@ -74,10 +73,16 @@ def _summarize_with_llm(summary: str) -> str:
         ],
     }
 
+
+@retry(on=httpx.HTTPError, attempts=3)
+def _summarize_with_llm(request: dict) -> str:
+    assert all(item in request for item in ["model", "max_tokens", "messages"])
+    logger.info("Requesting product summary from Claude", model=CLAUDE_MODEL)
+
     response = httpx.post(
         "https://api.anthropic.com/v1/messages",
         headers=CLAUDE_API_CALL_HEADERS,
-        json=data,
+        json=request,
         timeout=30,
     )
 
@@ -94,7 +99,8 @@ def _build_message_text(title: str, summary: str, ping_id: str) -> str:
     # Generate a more concise summary using an LLM if enabled
     if ENABLE_LLM_SUMMARIES:
         try:
-            summary = _summarize_with_llm(summary)
+            request_data = _build_claude_request(summary)
+            summary = _summarize_with_llm(request_data)
             message_text += f"\n{summary}"
         except Exception as e:  # noqa: BLE001
             logger.warning("Error generating summary with LLM.", error=str(e))
