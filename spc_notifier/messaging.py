@@ -1,4 +1,5 @@
 import re
+from functools import lru_cache
 
 import httpx
 import structlog
@@ -7,12 +8,15 @@ from stamina import retry
 from spc_notifier.config import (
     CLAUDE_API_KEY,
     CLAUDE_MODEL,
-    DISCORD_PING_USER_OR_ROLE_ID,
-    DISCORD_WEBHOOK_URL,
     ENABLE_LLM_SUMMARIES,
+    LOG_MODE,
+    WEBHOOKS,
 )
+from spc_notifier.filtering import check_passes_filters
+from spc_notifier.models import SpcProduct, WebhookConfig
 
-logger = structlog.get_logger()
+structlog.configure(wrapper_class=structlog.make_filtering_bound_logger(LOG_MODE))
+logger = structlog.get_logger(__name__)
 
 CLAUDE_MAX_TOKENS = 1024
 CLAUDE_API_CALL_HEADERS = {
@@ -55,10 +59,10 @@ def _cleanup_llm_response(response_text: str) -> str:
     return response_text.strip()
 
 
-@retry(on=httpx.HTTPError, attempts=3)
-def _summarize_with_llm(summary: str) -> str:
-    logger.info("Generating LLM summary using Claude", model=CLAUDE_MODEL)
-    data = {
+@lru_cache(maxsize=32)
+def _build_claude_request(summary: str) -> dict:
+    logger.debug("Building Claude request.")
+    return {
         "model": CLAUDE_MODEL,
         "max_tokens": CLAUDE_MAX_TOKENS,
         "messages": [
@@ -69,10 +73,16 @@ def _summarize_with_llm(summary: str) -> str:
         ],
     }
 
+
+@retry(on=httpx.HTTPError, attempts=3)
+def _summarize_with_llm(request: dict) -> str:
+    assert all(item in request for item in ["model", "max_tokens", "messages"])
+    logger.info("Requesting product summary from Claude", model=CLAUDE_MODEL)
+
     response = httpx.post(
         "https://api.anthropic.com/v1/messages",
         headers=CLAUDE_API_CALL_HEADERS,
-        json=data,
+        json=request,
         timeout=30,
     )
 
@@ -82,59 +92,64 @@ def _summarize_with_llm(summary: str) -> str:
     return _cleanup_llm_response(response_text)
 
 
-def get_message_text(title: str, summary: str) -> str:
+def _build_message_text(title: str, summary: str, ping_id: str) -> str:
     # Begin with product title, preceded by user or role mention if configured
-    message_text = (
-        f"<@{DISCORD_PING_USER_OR_ROLE_ID}>\n**{title}**"
-        if DISCORD_PING_USER_OR_ROLE_ID
-        else f"**{title}**"
-    )
+    message_text = f"<@{ping_id}>\n**{title}**" if ping_id else f"**{title}**"
 
     # Generate a more concise summary using an LLM if enabled
     if ENABLE_LLM_SUMMARIES:
         try:
-            summary = _summarize_with_llm(summary)
+            request_data = _build_claude_request(summary)
+            summary = _summarize_with_llm(request_data)
             message_text += f"\n{summary}"
         except Exception as e:  # noqa: BLE001
             logger.warning("Error generating summary with LLM.", error=str(e))
     return message_text
 
 
-def send_discord_message(
-    title: str,
-    summary: str,
-    link: str,
-    webhook_url: str = DISCORD_WEBHOOK_URL,
+def submit_for_notification(
+    product: SpcProduct,
+    webhook_configs: list[WebhookConfig] = WEBHOOKS,
 ) -> None:
-    """Sends Discord message containing summary and link to SPC alert."""
-    logger.info("Notifying Discord of new NOAA alert or product.", product=title)
+    """Receives SPC products for notification, checking each against the configured
+    webhooks and calling notification submission if they pass filters."""
 
-    summary = _cleanup_summary(summary)  # Remove HTML tags
-    message_text = get_message_text(title, summary)
+    for whc in webhook_configs:
+        if check_passes_filters(product, whc.filters):
+            logger.info(
+                "Product passed filters; sending notification.",
+                product=product.title,
+                webhook=whc.url,
+            )
+            json = _prepare_discord_message(whc, product)
+            _post_discord_message(whc.url, json)
 
-    _send_discord_message(message_text, title, summary, link, webhook_url)
+
+def _prepare_discord_message(
+    webhook_config: WebhookConfig,
+    product: SpcProduct,
+) -> dict[str, any]:
+    """Prepare and send a Discord message to the specified endpoint."""
+    summary = _cleanup_summary(product.summary)  # Remove HTML tags
+    message_text = _build_message_text(
+        product.title, product.summary, webhook_config.ping_user_or_role_id
+    )
+
+    return {
+        "content": message_text,
+        "embeds": [
+            {
+                "title": product.title,
+                "url": product.link,
+                "description": summary,
+            },
+        ],
+    }
 
 
 @retry(on=httpx.HTTPError, attempts=3)
-def _send_discord_message(
-    message_text: str,
-    title: str,
-    summary: str,
-    link: str,
-    webhook_url: str = DISCORD_WEBHOOK_URL,
-) -> None:
-    result = httpx.post(
-        webhook_url,
-        json={
-            "content": message_text,
-            "embeds": [
-                {
-                    "title": title,
-                    "url": link,
-                    "description": summary,
-                },
-            ],
-        },
-    )
+def _post_discord_message(webhook_url: str, json_: dict[str, any]) -> None:
+    """Send a Discord message to the specified endpoint."""
+    result = httpx.post(webhook_url, json=json_)
 
     result.raise_for_status()

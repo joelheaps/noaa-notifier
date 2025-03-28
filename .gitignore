@@ -169,4 +169,3 @@ cython_debug/
 
 # Config file
 config.toml
-config.py
