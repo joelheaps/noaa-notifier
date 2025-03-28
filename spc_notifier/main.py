@@ -9,9 +9,11 @@ from time import sleep
 
 import feedparser
 import structlog
+from httpx import HTTPError
 from stamina import retry
 
 from spc_notifier.config import CACHE_FILE, LOG_MODE, NOAA_RSS_FEED_URL
+from spc_notifier.filtering import check_contains_terms
 from spc_notifier.messaging import submit_for_notification
 from spc_notifier.models import SpcProduct
 
@@ -21,6 +23,7 @@ logger = structlog.get_logger(__name__)
 POLL_INTERVAL_SECONDS: int = 60
 _CACHE_FILE = Path(CACHE_FILE)
 SPC_PRODUCT_CACHE_SIZE: int = 500
+NO_DATA_TERMS: list[str] = ["No watches are valid", "No MDs are in effect"]
 
 
 class RssFeedError(Exception):
@@ -68,12 +71,17 @@ def process_feed_entries(
     seen_count = 0  # Just used for generating a message later
 
     for item in feed["entries"]:
+        # Some entries in the RSS feed are just a filler for 'nothing to report right now'.
+        if check_contains_terms(NO_DATA_TERMS, item["title"]):
+            continue
+
         logger.debug("Processing product.", title=item["title"])
 
         product = SpcProduct(
             title=item["title"], summary=item["summary"], link=item["link"]
         )
 
+        # Used for deduplication
         try:
             hash_ = get_hash(product.summary)
         except KeyError:
@@ -88,7 +96,7 @@ def process_feed_entries(
         try:
             submit_for_notification(product)
             send_success = True
-        except Exception as e:  # noqa: BLE001
+        except HTTPError as e:
             logger.warning(
                 "Error sending message for product. Will retry during next loop.",
                 title=product.title,
@@ -96,7 +104,7 @@ def process_feed_entries(
             )
             send_success = False
 
-        # If notification failed for product, don't mark as seen to allow retry in future
+        # Allow failed notifications to retry in future.
         if send_success and hash_ not in seen_products:
             seen_products.append(hash_)
 
