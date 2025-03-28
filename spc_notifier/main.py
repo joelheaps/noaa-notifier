@@ -11,7 +11,7 @@ import feedparser
 import structlog
 from stamina import retry
 
-from spc_notifier.config import NOAA_RSS_FEED_URL, SEEN_ALERTS_CACHE
+from spc_notifier.config import CACHE_FILE, LOG_MODE, NOAA_RSS_FEED_URL
 from spc_notifier.messaging import submit_for_notification
 from spc_notifier.models import SpcProduct
 
@@ -19,7 +19,7 @@ structlog.configure(wrapper_class=structlog.make_filtering_bound_logger(LOG_MODE
 logger = structlog.get_logger(__name__)
 
 POLL_INTERVAL_SECONDS: int = 60
-_SEEN_PRODUCTS_CACHE = Path(SEEN_ALERTS_CACHE)
+_CACHE_FILE = Path(CACHE_FILE)
 SPC_PRODUCT_CACHE_SIZE: int = 500
 
 
@@ -28,19 +28,26 @@ class RssFeedError(Exception):
 
 
 def save_seen_products(
-    products: deque[SpcProduct], cache_file: Path = _SEEN_PRODUCTS_CACHE
+    products: deque[SpcProduct], cache_file: Path = _CACHE_FILE
 ) -> None:
     """Save seen products to disk."""
+    logger.info(
+        "Storing seen products cache file.", count=len(products), cache_file=cache_file
+    )
     with cache_file.open("w") as f:
         json.dump(list(products), f, indent=4)
 
 
-def load_seen_products(cache_file: Path = _SEEN_PRODUCTS_CACHE) -> deque[SpcProduct]:
+def load_seen_products(cache_file: Path = _CACHE_FILE) -> deque[SpcProduct]:
     """Load seen products from disk."""
     try:
         with cache_file.open("r") as f:
             products = json.load(f)
-        logger.info("Loaded SPC product cache from disk.", count=len(products))
+        logger.info(
+            "Loaded seen products cache from disk.",
+            count=len(products),
+            cache_file=cache_file,
+        )
         return deque(products, maxlen=SPC_PRODUCT_CACHE_SIZE)
     except FileNotFoundError:
         return deque(maxlen=SPC_PRODUCT_CACHE_SIZE)
@@ -101,7 +108,7 @@ def process_feed_entries(
 def main(loop: bool) -> None:  # noqa: FBT001
     """Main execution function."""
     logger.info("Ensuring storage path for seen products cache exists.")
-    _SEEN_PRODUCTS_CACHE.parent.mkdir(parents=True, exist_ok=True)
+    _CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
 
     seen_products: deque[str] = load_seen_products()
 
