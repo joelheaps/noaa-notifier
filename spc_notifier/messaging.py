@@ -12,7 +12,8 @@ from spc_notifier.config import (
     LOG_MODE,
     WEBHOOKS,
 )
-from spc_notifier.models import SpcProduct, TermFilters, WebhookConfig
+from spc_notifier.filtering import check_passes_filters
+from spc_notifier.models import SpcProduct, WebhookConfig
 
 structlog.configure(wrapper_class=structlog.make_filtering_bound_logger(LOG_MODE))
 logger = structlog.get_logger(__name__)
@@ -56,59 +57,6 @@ def _cleanup_llm_response(response_text: str) -> str:
     )
 
     return response_text.strip()
-
-
-def _check_contains_terms(terms: list[str], string_: str) -> bool:
-    """Check if string contains at least one of the terms provided."""
-    string_ = string_.lower()
-    return any(term.lower() in string_ for term in terms)
-
-
-def _check_passes_filters(
-    product: SpcProduct,
-    filters: TermFilters,
-) -> bool:
-    """Determines whether an entry contains wanted and unwanted terms."""
-    # Check title and summary contain at least one necessary term each
-    title_include_ok = (
-        _check_contains_terms(filters.title_must_include_one, product.title)
-        if filters.title_must_include_one
-        else True
-    )
-    title_exclude_ok = (
-        not _check_contains_terms(filters.title_must_exclude_all, product.title)
-        if filters.title_must_exclude_all
-        else True
-    )
-
-    summary_include_ok = (
-        _check_contains_terms(filters.summary_must_include_one, product.summary)
-        if filters.summary_must_include_one
-        else True
-    )
-    summary_exclude_ok = (
-        not _check_contains_terms(filters.summary_must_exclude_all, product.summary)
-        if filters.summary_must_exclude_all
-        else True
-    )
-
-    if (
-        title_include_ok
-        and title_exclude_ok
-        and summary_include_ok
-        and summary_exclude_ok
-    ):
-        return True
-
-    logger.info(
-        "Product did not pass filters.",
-        product=product.title,
-        title_must_include_one="pass" if title_include_ok else "fail",
-        title_must_exclude_all="pass" if title_exclude_ok else "fail",
-        summary_must_include_one="pass" if summary_include_ok else "fail",
-        summary_must_exclude_all="pass" if summary_exclude_ok else "fail",
-    )
-    return False
 
 
 @lru_cache(maxsize=32)
@@ -161,7 +109,12 @@ def submit_for_notification(
     webhooks and calling notification submission if they pass filters."""
 
     for whc in webhook_configs:
-        if _check_passes_filters(product, whc.filters):
+        if check_passes_filters(product, whc.filters):
+            logger.info(
+                "Product passed filters; sending notification.",
+                product=product.title,
+                webhook=whc.url,
+            )
             json = _prepare_discord_message(whc, product)
             _post_discord_message(whc.url, json)
 
