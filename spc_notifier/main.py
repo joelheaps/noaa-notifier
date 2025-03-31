@@ -75,7 +75,7 @@ def process_feed_entries(
         if check_contains_terms(NO_DATA_TERMS, item["title"]):
             continue
 
-        logger.debug("Processing product.", title=item["title"])
+        logger.debug("Processing product.", title=item["title"], item=item)
 
         product = SpcProduct(
             title=item["title"], summary=item["summary"], link=item["link"]
