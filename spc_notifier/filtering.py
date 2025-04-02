@@ -5,11 +5,13 @@ from spc_notifier.models import SpcProduct, TermFilters
 logger = structlog.get_logger()
 
 
-def check_contains_terms(terms: list[str] | None, string_: str) -> bool:
+def check_contains_terms(
+    terms: list[str] | None, string_: str, desired_result: bool = True
+) -> bool:
     """Check if string contains at least one of the terms provided.
-    Returns True if terms is None or empty."""
+    Returns desired_result if terms is None or empty."""
     if not terms:
-        return True
+        return desired_result
     string_ = string_.lower()
     return any(term.lower() in string_ for term in terms)
 
@@ -21,16 +23,16 @@ def check_passes_filters(
     """Determines whether an entry contains wanted and unwanted terms."""
     filter_results = {
         "title_include": check_contains_terms(
-            filters.title_must_include_one, product.title
+            filters.title_must_include_one, product.title, True
         ),
         "title_exclude": not check_contains_terms(
-            filters.title_must_exclude_all, product.title
+            filters.title_must_exclude_all, product.title, False
         ),
         "summary_include": check_contains_terms(
-            filters.summary_must_include_one, product.summary
+            filters.summary_must_include_one, product.summary, True
         ),
         "summary_exclude": not check_contains_terms(
-            filters.summary_must_exclude_all, product.summary
+            filters.summary_must_exclude_all, product.summary, False
         ),
     }
 
