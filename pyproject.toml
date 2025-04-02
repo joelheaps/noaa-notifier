@@ -1,8 +1,8 @@
 [project]
-name = "noaa-notifier"
+name = "spc-notifier"
 version = "0.1.0"
-description = "Default template for PDM package"
-authors = [{ name = "Joel Heaps", email = "joel@joelheaps.com" }]
+description = "Generates Discord messages for new NOAA Storm Prediction Center products."
+readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "httpx>=0.27.0",
@@ -14,8 +14,6 @@ dependencies = [
     "stamina>=25.1.0",
     "tomli>=2.2.1",
 ]
-readme = "README.md"
-license = { text = "MIT" }
 
 [tool.ruff.lint]
 # Enable all rules, with exceptions

@@ -53,9 +53,15 @@ def load_seen_products(cache_file: Path = _CACHE_FILE) -> deque[SpcProduct]:
         )
         return deque(products, maxlen=SPC_PRODUCT_CACHE_SIZE)
     except FileNotFoundError:
+        logger.warning(
+            "Could not find seen products cache file.  Creating empty cache.",
+            file=cache_file,
+        )
         return deque(maxlen=SPC_PRODUCT_CACHE_SIZE)
     except json.JSONDecodeError:
-        logger.exception("Failed to load cache from disk. Creating empty cache.")
+        logger.exception(
+            "Failed to load cache from disk. Creating empty cache.", file=cache_file
+        )
         return deque(maxlen=SPC_PRODUCT_CACHE_SIZE)
 
 
@@ -127,7 +133,7 @@ def main(loop: bool) -> None:  # noqa: FBT001
             raise RssFeedError
 
         logger.info(
-            "Retrieved SPC product entries from NOAA RSS feed.",
+            "Retrieved current SPC product entries from NOAA RSS feed.",
             count=len(feed["entries"]),
         )
 
