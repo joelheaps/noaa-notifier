@@ -59,7 +59,6 @@ def _cleanup_llm_response(response_text: str) -> str:
     return response_text.strip()
 
 
-@lru_cache(maxsize=32)
 def _build_claude_request(summary: str) -> dict:
     logger.debug("Building Claude request.")
     return {
@@ -75,6 +74,7 @@ def _build_claude_request(summary: str) -> dict:
 
 
 @retry(on=httpx.HTTPError, attempts=3)
+@lru_cache(maxsize=32)
 def _summarize_with_llm(request: dict) -> str:
     assert all(item in request for item in ["model", "max_tokens", "messages"])
     logger.info("Requesting product summary from Claude", model=CLAUDE_MODEL)
