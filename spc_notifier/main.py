@@ -119,7 +119,7 @@ def process_feed_entries(
 
 
 @retry(on=RssFeedError, attempts=3)
-def main(loop: bool) -> None:  # noqa: FBT001
+def main(loop: bool) -> None:
     """Main execution function."""
     logger.info("Ensuring storage path for seen products cache exists.")
     _CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)

@@ -9,6 +9,7 @@ from spc_notifier.config import (
     CLAUDE_API_KEY,
     CLAUDE_MODEL,
     ENABLE_LLM_SUMMARIES,
+    INCLUDE_SPC_SUMMARIES,
     LOG_MODE,
     WEBHOOKS,
 )
@@ -92,21 +93,6 @@ def _summarize_with_llm(request: dict) -> str:
     return _cleanup_llm_response(response_text)
 
 
-def _build_message_text(title: str, summary: str, ping_id: str) -> str:
-    # Begin with product title, preceded by user or role mention if configured
-    message_text = f"<@{ping_id}>\n**{title}**" if ping_id else f"**{title}**"
-
-    # Generate a more concise summary using an LLM if enabled
-    if ENABLE_LLM_SUMMARIES:
-        try:
-            request_data = _build_claude_request(summary)
-            summary = _summarize_with_llm(request_data)
-            message_text += f"\n{summary}"
-        except Exception as e:  # noqa: BLE001
-            logger.warning("Error generating summary with LLM.", error=str(e))
-    return message_text
-
-
 def submit_for_notification(
     product: SpcProduct,
     webhook_configs: list[WebhookConfig] = WEBHOOKS,
@@ -128,23 +114,49 @@ def submit_for_notification(
 def _prepare_discord_message(
     webhook_config: WebhookConfig,
     product: SpcProduct,
+    enable_llm_summary: bool = ENABLE_LLM_SUMMARIES,
+    include_spc_summary: bool = INCLUDE_SPC_SUMMARIES,
 ) -> dict[str, any]:
-    """Prepare and send a Discord message to the specified endpoint."""
-    summary = _cleanup_summary(product.summary)  # Remove HTML tags
-    message_text = _build_message_text(
-        product.title, product.summary, webhook_config.ping_user_or_role_id
+    """Prepare Discord message payload."""
+
+    # Prepare message text
+    # Begin with product title, preceded by user or role mention if configured
+    message_text = (
+        f"<@{webhook_config.ping_user_or_role_id}>\n**{product.title}**"
+        if webhook_config.ping_user_or_role_id
+        else f"**{product.title}**"
     )
 
-    return {
-        "content": message_text,
-        "embeds": [
+    cleaned_summary = _cleanup_summary(product.summary)  # Remove HTML tags, etc.
+
+    # Generate a more concise summary of the product using an LLM if enabled
+    if enable_llm_summary:
+        try:
+            request_data = _build_claude_request(cleaned_summary)
+            llm_summary = _summarize_with_llm(request_data)
+            message_text += f"\n{llm_summary}"
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Error generating summary with LLM.", error=str(e))
+            include_spc_summary = True
+
+    # Prepare data payload
+    data: dict = {}
+
+    # Embed the original SPC summary or add a link
+    if include_spc_summary:
+        data["embeds"] = [
             {
                 "title": product.title,
                 "url": product.link,
-                "description": summary,
+                "description": product.summary,
             },
-        ],
-    }
+        ]
+    else:
+        message_text += f"\n\nFor more details, see [{product.link}]({product.link})."
+
+    data["content"] = message_text
+
+    return data
 
 
 @retry(on=httpx.HTTPError, attempts=3)

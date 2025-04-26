@@ -23,16 +23,16 @@ def check_passes_filters(
     """Determines whether an entry contains wanted and unwanted terms."""
     filter_results = {
         "title_include": check_contains_terms(
-            filters.title_must_include_one, product.title, True
+            filters.title_must_include_one, product.title, desired_result=True
         ),
         "title_exclude": not check_contains_terms(
-            filters.title_must_exclude_all, product.title, False
+            filters.title_must_exclude_all, product.title, desired_result=False
         ),
         "summary_include": check_contains_terms(
-            filters.summary_must_include_one, product.summary, True
+            filters.summary_must_include_one, product.summary, desired_result=True
         ),
         "summary_exclude": not check_contains_terms(
-            filters.summary_must_exclude_all, product.summary, False
+            filters.summary_must_exclude_all, product.summary, desired_result=False
         ),
     }
 
