@@ -23,16 +23,16 @@ def check_passes_filters(
     """Determines whether an entry contains wanted and unwanted terms."""
     filter_results = {
         "title_include": check_contains_terms(
-            filters.title_must_include_one, product.title, desired_result=True
+            filters.title_must_include_one, product["title"], desired_result=True
         ),
         "title_exclude": not check_contains_terms(
-            filters.title_must_exclude_all, product.title, desired_result=False
+            filters.title_must_exclude_all, product["title"], desired_result=False
         ),
         "summary_include": check_contains_terms(
-            filters.summary_must_include_one, product.summary, desired_result=True
+            filters.summary_must_include_one, product["summary"], desired_result=True
         ),
         "summary_exclude": not check_contains_terms(
-            filters.summary_must_exclude_all, product.summary, desired_result=False
+            filters.summary_must_exclude_all, product["summary"], desired_result=False
         ),
     }
 
@@ -41,7 +41,7 @@ def check_passes_filters(
 
     logger.info(
         "Product did not pass filters.",
-        product=product.title,
+        product=product["title"],
         title_must_include_one="pass" if filter_results["title_include"] else "fail",
         title_must_exclude_all="pass" if filter_results["title_exclude"] else "fail",
         summary_must_include_one="pass"

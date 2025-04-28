@@ -1,11 +1,13 @@
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from typing import TypedDict
 
 
-@dataclass
-class SpcProduct:
+class SpcProduct(TypedDict):
     title: str
     summary: str
     link: str
+    seen_at: datetime = datetime.now(tz=UTC)
 
 
 @dataclass

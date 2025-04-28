@@ -12,6 +12,7 @@ import structlog
 from httpx import HTTPError
 from stamina import retry
 
+from spc_notifier.cache import load_seen_products, save_seen_products
 from spc_notifier.config import CACHE_FILE, LOG_MODE, NOAA_RSS_FEED_URL
 from spc_notifier.filtering import check_contains_terms
 from spc_notifier.messaging import submit_for_notification
@@ -28,41 +29,6 @@ NO_DATA_TERMS: list[str] = ["No watches are valid", "No MDs are in effect"]
 
 class RssFeedError(Exception):
     """Raised when an error occurs while fetching the RSS feed."""
-
-
-def save_seen_products(
-    products: deque[SpcProduct], cache_file: Path = _CACHE_FILE
-) -> None:
-    """Save seen products to disk."""
-    logger.info(
-        "Storing seen products cache file.", count=len(products), cache_file=cache_file
-    )
-    with cache_file.open("w") as f:
-        json.dump(list(products), f, indent=4)
-
-
-def load_seen_products(cache_file: Path = _CACHE_FILE) -> deque[SpcProduct]:
-    """Load seen products from disk."""
-    try:
-        with cache_file.open("r") as f:
-            products = json.load(f)
-        logger.info(
-            "Loaded seen products cache from disk.",
-            count=len(products),
-            cache_file=cache_file,
-        )
-        return deque(products, maxlen=SPC_PRODUCT_CACHE_SIZE)
-    except FileNotFoundError:
-        logger.warning(
-            "Could not find seen products cache file.  Creating empty cache.",
-            file=cache_file,
-        )
-        return deque(maxlen=SPC_PRODUCT_CACHE_SIZE)
-    except json.JSONDecodeError:
-        logger.exception(
-            "Failed to load cache from disk. Creating empty cache.", file=cache_file
-        )
-        return deque(maxlen=SPC_PRODUCT_CACHE_SIZE)
 
 
 def get_hash(item: dict | str) -> str:
@@ -89,13 +55,15 @@ def process_feed_entries(
 
         # Used for deduplication
         try:
-            hash_ = get_hash(product.summary)
+            hash_ = get_hash(product["summary"])
         except KeyError:
-            logger.exception("Skipping entry with empty summary.", title=product.title)
+            logger.exception(
+                "Skipping entry with empty summary.", title=product["title"]
+            )
             continue
 
         if hash_ in seen_products:
-            logger.debug("Product previously seen product.", title=product.title)
+            logger.debug("Product previously seen product.", title=product["title"])
             seen_count += 1
             continue
 
@@ -105,7 +73,7 @@ def process_feed_entries(
         except HTTPError as e:
             logger.warning(
                 "Error sending message for product. Will retry during next loop.",
-                title=product.title,
+                title=product["title"],
                 error=str(e),
             )
             send_success = False

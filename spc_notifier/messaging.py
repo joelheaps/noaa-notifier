@@ -104,7 +104,7 @@ def submit_for_notification(
         if check_passes_filters(product, whc.filters):
             logger.info(
                 "Product passed filters; sending notification.",
-                product=product.title,
+                product=product["title"],
                 webhook=whc.url,
             )
             json = _prepare_discord_message(whc, product)
@@ -122,12 +122,12 @@ def _prepare_discord_message(
     # Prepare message text
     # Begin with product title, preceded by user or role mention if configured
     message_text = (
-        f"<@{webhook_config.ping_user_or_role_id}>\n**{product.title}**"
+        f"<@{webhook_config.ping_user_or_role_id}>\n**{product["title"]}**"
         if webhook_config.ping_user_or_role_id
-        else f"**{product.title}**"
+        else f"**{product["title"]}**"
     )
 
-    cleaned_summary = _cleanup_summary(product.summary)  # Remove HTML tags, etc.
+    cleaned_summary = _cleanup_summary(product["summary"])  # Remove HTML tags, etc.
 
     # Generate a more concise summary of the product using an LLM if enabled
     if enable_llm_summary:
@@ -146,13 +146,15 @@ def _prepare_discord_message(
     if include_spc_summary:
         data["embeds"] = [
             {
-                "title": product.title,
-                "url": product.link,
-                "description": product.summary,
+                "title": product["title"],
+                "url": product["link"],
+                "description": product["summary"],
             },
         ]
     else:
-        message_text += f"\n\nFor more details, see [{product.link}]({product.link})."
+        message_text += (
+            f"\n\nFor more details, see [{product["link"]}]({product["link"]})."
+        )
 
     data["content"] = message_text
 

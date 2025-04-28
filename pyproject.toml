@@ -30,7 +30,9 @@ ignore = [
     "PGH003",
     "E501",
     "FBT001",
-    "FBT002"
+    "FBT002",
+    "TCH001",
+    "TCH003"
 ]
 
 [dependency-groups]
