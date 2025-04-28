@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import argparse
-import json
 from collections import deque
-from hashlib import sha256
 from pathlib import Path
 from time import sleep
 
@@ -31,14 +29,8 @@ class RssFeedError(Exception):
     """Raised when an error occurs while fetching the RSS feed."""
 
 
-def get_hash(item: dict | str) -> str:
-    """Generate a hash for a dictionary or string. Used for deduplicating alerts."""
-    as_str = json.dumps(item)
-    return sha256(as_str.encode()).hexdigest()
-
-
 def process_feed_entries(
-    feed: feedparser.FeedParserDict, seen_products: deque[str]
+    feed: feedparser.FeedParserDict, seen_products: deque[SpcProduct]
 ) -> deque[str]:
     seen_count = 0  # Just used for generating a message later
 
@@ -54,15 +46,13 @@ def process_feed_entries(
         )
 
         # Used for deduplication
-        try:
-            hash_ = get_hash(product["summary"])
-        except KeyError:
+        if not product["title"]:
             logger.exception(
                 "Skipping entry with empty summary.", title=product["title"]
             )
             continue
 
-        if hash_ in seen_products:
+        if product in seen_products:
             logger.debug("Product previously seen product.", title=product["title"])
             seen_count += 1
             continue
@@ -79,8 +69,8 @@ def process_feed_entries(
             send_success = False
 
         # Allow failed notifications to retry in future.
-        if send_success and hash_ not in seen_products:
-            seen_products.append(hash_)
+        if send_success and product not in seen_products:
+            seen_products.append(product)
 
     logger.info("Skipped previously seen products.", count=seen_count)
     return seen_products
