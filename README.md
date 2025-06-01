@@ -8,7 +8,7 @@ Optionally, an LLM (Claude) can be used to generate a summary of each alert, wit
 
 ## Getting started
 
-To get started, rename `config_example.py` to `config.py`, fill in the webhook URL for an integration in your Discord channel, and optionally adjust any other settings (including alert/product filters).
+To get started, create a config.toml with fields including the webhook URL for an integration in your Discord channel, and optionally adjust any other settings (including alert/product filters).
 
 Then, launch the application with Docker compose:
 ```bash
