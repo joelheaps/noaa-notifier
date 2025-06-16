@@ -1,0 +1,45 @@
+# NOAA Storm Prediction Center RSS feed URL. This shouldn't change.
+noaa_rss_feed_url = "https://www.spc.noaa.gov/products/spcrss.xml"
+
+# Enable LLM-generated summaries for SPC products.
+enable_llm_summaries = false
+claude_api_key = ""
+claude_model = "claude-3-5-sonnet-20241022" # https://docs.anthropic.com/en/docs/about-claude/models/all-models#model-comparison-table
+
+# Stores most recently seen products to deduplicate notifications.
+cache_file = "storage/seen_products.json"
+
+# Enable more verbose logging
+debug_mode = false
+
+[[discord_webhooks]]
+# Enter a webhook URL to send Discord notifications to your channel.
+url = "https://discord.com/api/webhooks/sfh9087sgf09h87d09hg87s0f78"
+
+# Enter a user or role ID to ping when a Discord notification is sent (or leave empty).
+# See https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID
+ping_user_or_role_id = ""
+
+[discord_webhooks.filters]
+# All product entries must contain at least one of these terms in the title.
+title_must_include_one = []
+
+# All product entries with these terms in the title will be ignored.
+title_must_exclude_all = ["No watches are valid", "No MDs are in effect"]
+
+# Product entries must contain at least one of these terms. All other entries will be ignored.
+summary_must_include_one = ["Nebraska", "Iowa", "Oklahoma"]
+
+# All product entries with these terms in the summary will be ignored.
+summary_must_exclude_all = ["Has not been issued yet"]
+
+# Add another Discord webhook by adding another [[discord_webhooks]] block.
+[[discord_webhooks]]
+url = "https://discord.com/api/webhooks/0a98dsf098a7df0987ad098f7ad09d8"
+ping_user_or_role_id = ""
+
+[discord_webhooks.filters]
+title_must_include_one = []
+title_must_exclude_all = ["No watches are valid", "No MDs are in effect"]
+summary_must_include_one = ["East"]
+summary_must_exclude_all = ["Has not been issued yet"]
