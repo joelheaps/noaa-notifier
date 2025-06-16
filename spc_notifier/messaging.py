@@ -30,6 +30,11 @@ CLEAN_HTML_REGEX = re.compile("<.*?>")
 NUMBERED_LINE_REGEX = re.compile(r"^\d+\.")
 
 
+class HashableDict(dict):
+    def __hash__(self) -> int:
+        return hash(frozenset(self))
+
+
 def _cleanup_summary(string_: str) -> str:
     """Remove HTML tags and related content from product summary."""
     cleaned = re.sub(CLEAN_HTML_REGEX, "", string_)
@@ -58,24 +63,26 @@ def _cleanup_llm_response(response_text: str) -> str:
     return response_text.strip()
 
 
-def _build_claude_request(summary: str) -> dict:
+def _build_claude_request(summary: str) -> HashableDict:
     logger.debug("Building Claude request.")
-    return {
-        "model": CLAUDE_MODEL,
-        "max_tokens": CLAUDE_MAX_TOKENS,
-        "messages": [
-            {
-                "system": CLAUDE_PROMPT,
-                "role": "user",
-                "content": summary,
-            }
-        ],
-    }
+    return HashableDict(
+        {
+            "model": CLAUDE_MODEL,
+            "max_tokens": CLAUDE_MAX_TOKENS,
+            "messages": [
+                {
+                    "system": CLAUDE_PROMPT,
+                    "role": "user",
+                    "content": summary,
+                }
+            ],
+        }
+    )
 
 
 @retry(on=httpx.HTTPError, attempts=3)
 @lru_cache(maxsize=32)
-def _summarize_with_llm(request: dict) -> str:
+def _summarize_with_llm(request: HashableDict) -> str:
     assert all(item in request for item in ("model", "max_tokens", "messages"))
     logger.info("Requesting product summary from Claude", model=CLAUDE_MODEL)
 
