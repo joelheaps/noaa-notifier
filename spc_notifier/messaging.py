@@ -25,9 +25,7 @@ CLAUDE_API_CALL_HEADERS = {
     "Content-Type": "application/json",
     "Anthropic-Version": "2023-06-01",
 }
-CLAUDE_PROMPT = (
-    "Summarize this National Weather Service Storm Prediction Center text concisely."
-)
+CLAUDE_PROMPT = "Summarize this National Weather Service text concisely, emphasizing understandability for non-weather-experts, without omitting details that weather experts would find helpful."
 CLEAN_HTML_REGEX = re.compile("<.*?>")
 NUMBERED_LINE_REGEX = re.compile(r"^\d+\.")
 
@@ -67,8 +65,9 @@ def _build_claude_request(summary: str) -> dict:
         "max_tokens": CLAUDE_MAX_TOKENS,
         "messages": [
             {
+                "system": CLAUDE_PROMPT,
                 "role": "user",
-                "content": f"{CLAUDE_PROMPT}\n\n{summary}",
+                "content": summary,
             }
         ],
     }
@@ -77,7 +76,7 @@ def _build_claude_request(summary: str) -> dict:
 @retry(on=httpx.HTTPError, attempts=3)
 @lru_cache(maxsize=32)
 def _summarize_with_llm(request: dict) -> str:
-    assert all(item in request for item in ["model", "max_tokens", "messages"])
+    assert all(item in request for item in ("model", "max_tokens", "messages"))
     logger.info("Requesting product summary from Claude", model=CLAUDE_MODEL)
 
     response = httpx.post(
@@ -137,6 +136,8 @@ def _prepare_discord_message(
             message_text += f"\n{llm_summary}"
         except Exception as e:  # noqa: BLE001
             logger.warning("Error generating summary with LLM.", error=str(e))
+
+            # If summary generation fails, include original text
             include_spc_summary = True
 
     # Prepare data payload
