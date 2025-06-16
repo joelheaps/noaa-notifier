@@ -25,7 +25,9 @@ CLAUDE_API_CALL_HEADERS = {
     "Content-Type": "application/json",
     "Anthropic-Version": "2023-06-01",
 }
-CLAUDE_PROMPT = "Summarize this National Weather Service text concisely, emphasizing understandability for non-weather-experts, without omitting details that weather experts would find helpful."
+CLAUDE_PROMPT = """Summarize this National Weather Service text concisely, emphasizing understandability for non-weather-experts,
+                without omitting details that weather experts would find helpful.  Stick to relatively plain formatting, using bolded
+                text and lists where appropriate.  Limit the length to a paragraph or less."""
 CLEAN_HTML_REGEX = re.compile("<.*?>")
 NUMBERED_LINE_REGEX = re.compile(r"^\d+\.")
 
@@ -69,9 +71,9 @@ def _build_claude_request(summary: str) -> HashableDict:
         {
             "model": CLAUDE_MODEL,
             "max_tokens": CLAUDE_MAX_TOKENS,
+            "system": CLAUDE_PROMPT,
             "messages": [
                 {
-                    "system": CLAUDE_PROMPT,
                     "role": "user",
                     "content": summary,
                 }
@@ -160,9 +162,13 @@ def _prepare_discord_message(
             },
         ]
     else:
-        message_text += (
-            f"\n\nFor more details, see [{product["link"]}]({product["link"]})."
-        )
+        data["embeds"] = [
+            {
+                "title": product["title"],
+                "url": product["link"],
+                "description": "Click to view the full SPC product information."
+            }
+        ]
 
     data["content"] = message_text
 

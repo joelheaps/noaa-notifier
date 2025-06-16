@@ -161,8 +161,9 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-# Sqlite database files
+# Application storage
 *.db
+storage/
 
 # Json files
 *.json
