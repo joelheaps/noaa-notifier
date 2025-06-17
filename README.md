@@ -15,17 +15,15 @@ Then, launch the application with Docker compose:
 docker compose up -d --build
 ```
 
-To run without Docker, install the required dependencies and run the application:
+### Running locally
+This project uses `uv` to manage dependencies.  Use one of the many installation methods at https://docs.astral.sh/uv/getting-started/installation/ to install `uv` (or simply `pip install uv`).
+
+Then, run the application.
 ```bash
-# Create a virtual environment
-python -m venv .venv
-
-# Activate the virtual environment
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run the application
-python -m spc_notifier.main # --loop
+uv run python -m spc_notifier.main
 ```
+
+### Setting up a development environment
+Similar to the instructions for *Running locally* above, `uv` is a prerequisite.
+
+Simply run `uv sync` to create a virtual environment with all project (including development) dependencies.

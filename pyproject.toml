@@ -1,6 +1,6 @@
 [project]
 name = "spc-notifier"
-version = "0.1.0"
+version = "0.2.0"
 description = "Generates Discord messages for new NOAA Storm Prediction Center products."
 readme = "README.md"
 requires-python = ">=3.13"
@@ -14,6 +14,15 @@ dependencies = [
     "stamina>=25.1.0",
     "tomli>=2.2.1",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+    "ruff>=0.11.2",
+]
+
+[tool.uv]
+package = false
 
 [tool.ruff.lint]
 # Enable all rules, with exceptions
@@ -33,10 +42,4 @@ ignore = [
     "FBT002",
     "TCH001",
     "TCH003"
-]
-
-[dependency-groups]
-dev = [
-    "pytest>=8.3.5",
-    "ruff>=0.11.2",
 ]
