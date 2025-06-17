@@ -1,6 +1,10 @@
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import TypedDict
+from typing import Self, TypedDict
+
+import structlog
+
+logger = structlog.get_logger(__name__)
 
 
 class SpcProduct(TypedDict):
@@ -23,3 +27,26 @@ class WebhookConfig:
     url: str
     ping_user_or_role_id: str = ""
     filters: TermFilters = field(default_factory=TermFilters())
+
+    @classmethod
+    def from_dict(cls, dict_: dict) -> Self:
+        """Convert nested filter config into TermFilters object before returning WebhookConfig"""
+        dict_["filters"] = TermFilters(**dict_.get("filters", {}))
+        return WebhookConfig(**dict_)
+
+
+@dataclass
+class LLMConfig:
+    enable_llm_summaries: bool = False
+    include_spc_summaries: bool = True
+    claude_api_key: str = ""
+    claude_model: str = ""
+    claude_max_tokens: int = 1024
+    prompt: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.enable_llm_summaries and not self.include_spc_summaries:
+            logger.warning(
+                "Both 'enable_llm_summaries' and 'include_spc_summaries' were disabled. Enabling 'include_spc_summaries' so messages aren't empty."
+            )
+            self.include_spc_summaries = True

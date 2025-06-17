@@ -6,16 +6,13 @@ from pathlib import Path
 
 import structlog
 
-from spc_notifier.config import CACHE_FILE, LOG_MODE
+from spc_notifier.config import CACHE_FILE
 from spc_notifier.models import SpcProduct
 
-structlog.configure(wrapper_class=structlog.make_filtering_bound_logger(LOG_MODE))
 logger = structlog.get_logger(__name__)
 
-POLL_INTERVAL_SECONDS: int = 60
 _CACHE_FILE = Path(CACHE_FILE)
 SPC_PRODUCT_CACHE_SIZE: int = 500
-NO_DATA_TERMS: list[str] = ["No watches are valid", "No MDs are in effect"]
 
 
 def save_seen_products(

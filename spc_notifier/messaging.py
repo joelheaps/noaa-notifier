@@ -6,28 +6,19 @@ import structlog
 from stamina import retry
 
 from spc_notifier.config import (
-    CLAUDE_API_KEY,
-    CLAUDE_MODEL,
-    ENABLE_LLM_SUMMARIES,
-    INCLUDE_SPC_SUMMARIES,
-    LOG_MODE,
+    LLM_CONFIG,
     WEBHOOKS,
 )
 from spc_notifier.filtering import check_passes_filters
-from spc_notifier.models import SpcProduct, WebhookConfig
+from spc_notifier.models import LLMConfig, SpcProduct, WebhookConfig
 
-structlog.configure(wrapper_class=structlog.make_filtering_bound_logger(LOG_MODE))
 logger = structlog.get_logger(__name__)
 
-CLAUDE_MAX_TOKENS = 1024
 CLAUDE_API_CALL_HEADERS = {
-    "x-api-key": CLAUDE_API_KEY,
+    "x-api-key": LLM_CONFIG.claude_api_key,
     "Content-Type": "application/json",
     "Anthropic-Version": "2023-06-01",
 }
-CLAUDE_PROMPT = """Summarize this National Weather Service text concisely, emphasizing understandability for non-weather-experts,
-                without omitting details that weather experts would find helpful.  Stick to relatively plain formatting, using bolded
-                text and lists where appropriate.  Limit the length to a paragraph or less."""
 CLEAN_HTML_REGEX = re.compile("<.*?>")
 NUMBERED_LINE_REGEX = re.compile(r"^\d+\.")
 
@@ -65,13 +56,15 @@ def _cleanup_llm_response(response_text: str) -> str:
     return response_text.strip()
 
 
-def _build_claude_request(summary: str) -> HashableDict:
+def _build_claude_request(
+    summary: str, llm_config: LLMConfig = LLM_CONFIG
+) -> HashableDict:
     logger.debug("Building Claude request.")
     return HashableDict(
         {
-            "model": CLAUDE_MODEL,
-            "max_tokens": CLAUDE_MAX_TOKENS,
-            "system": CLAUDE_PROMPT,
+            "model": llm_config.claude_model,
+            "max_tokens": llm_config.claude_max_tokens,
+            "system": llm_config.prompt,
             "messages": [
                 {
                     "role": "user",
@@ -86,7 +79,7 @@ def _build_claude_request(summary: str) -> HashableDict:
 @lru_cache(maxsize=32)
 def _summarize_with_llm(request: HashableDict) -> str:
     assert all(item in request for item in ("model", "max_tokens", "messages"))
-    logger.info("Requesting product summary from Claude", model=CLAUDE_MODEL)
+    logger.info("Requesting product summary from Claude", model=request["model"])
 
     response = httpx.post(
         "https://api.anthropic.com/v1/messages",
@@ -122,8 +115,8 @@ def submit_for_notification(
 def _prepare_discord_message(
     webhook_config: WebhookConfig,
     product: SpcProduct,
-    enable_llm_summary: bool = ENABLE_LLM_SUMMARIES,
-    include_spc_summary: bool = INCLUDE_SPC_SUMMARIES,
+    enable_llm_summaries: bool = LLM_CONFIG.enable_llm_summaries,
+    include_spc_summaries: bool = LLM_CONFIG.include_spc_summaries,
 ) -> dict[str, any]:
     """Prepare Discord message payload."""
 
@@ -138,7 +131,7 @@ def _prepare_discord_message(
     cleaned_summary = _cleanup_summary(product["summary"])  # Remove HTML tags, etc.
 
     # Generate a more concise summary of the product using an LLM if enabled
-    if enable_llm_summary:
+    if enable_llm_summaries:
         try:
             request_data = _build_claude_request(cleaned_summary)
             llm_summary = _summarize_with_llm(request_data)
@@ -147,13 +140,13 @@ def _prepare_discord_message(
             logger.warning("Error generating summary with LLM.", error=str(e))
 
             # If summary generation fails, include original text
-            include_spc_summary = True
+            include_spc_summaries = True
 
     # Prepare data payload
     data: dict = {}
 
     # Embed the original SPC summary or add a link
-    if include_spc_summary:
+    if include_spc_summaries:
         data["embeds"] = [
             {
                 "title": product["title"],
@@ -166,7 +159,7 @@ def _prepare_discord_message(
             {
                 "title": product["title"],
                 "url": product["link"],
-                "description": "Click to view the full SPC product information."
+                "description": "Click to view the full SPC product information.",
             }
         ]
 

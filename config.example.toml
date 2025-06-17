@@ -1,20 +1,26 @@
 # NOAA Storm Prediction Center RSS feed URL. This shouldn't change.
 noaa_rss_feed_url = "https://www.spc.noaa.gov/products/spcrss.xml"
 
-# Enable LLM-generated summaries for SPC products.
-enable_llm_summaries = false
-claude_api_key = ""
-claude_model = "claude-3-5-sonnet-20241022" # https://docs.anthropic.com/en/docs/about-claude/models/all-models#model-comparison-table
-
 # Stores most recently seen products to deduplicate notifications.
 cache_file = "storage/seen_products.json"
 
 # Enable more verbose logging
 debug_mode = false
 
+# Settings for LLM-generated summaries
+[llm]
+enable_llm_summaries = true
+include_spc_summaries = false
+claude_api_key = "sk-ant-api03-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+claude_model = "claude-sonnet-4-20250514" # https://docs.anthropic.com/en/docs/about-claude/models/all-models#model-comparison-table
+prompt = """Summarize this National Weather Service text concisely, emphasizing understandability for non-weather-experts, \
+without omitting details that weather experts would find helpful.  Omit action instructions; let the readers draw their own \
+conclusions about what to do based on the information provided.  Stick to relatively plain formatting, using bolded \
+text and lists where appropriate.  Limit the length to a paragraph or less."""
+
 [[discord_webhooks]]
 # Enter a webhook URL to send Discord notifications to your channel.
-url = "https://discord.com/api/webhooks/sfh9087sgf09h87d09hg87s0f78"
+url = "https://discord.com/api/webhooks/1234567890123456789/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
 # Enter a user or role ID to ping when a Discord notification is sent (or leave empty).
 # See https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID
@@ -35,7 +41,7 @@ summary_must_exclude_all = ["Has not been issued yet"]
 
 # Add another Discord webhook by adding another [[discord_webhooks]] block.
 [[discord_webhooks]]
-url = "https://discord.com/api/webhooks/0a98dsf098a7df0987ad098f7ad09d8"
+url = "https://discord.com/api/webhooks/9876543210987654321/YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY"
 ping_user_or_role_id = ""
 
 [discord_webhooks.filters]
